@@ -1,5 +1,4 @@
 library(RSQLite)
-library(DBI)
 
 standard_con<- function(){
 

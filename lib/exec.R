@@ -1,10 +1,12 @@
 #install.packages("RSQLite")
-
+#setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
 
 source("classes.R")
 source("dbcon.R")
+
+lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
 
 #make a db connection, and set some standard pragma settings.  
 con <-standard_con()

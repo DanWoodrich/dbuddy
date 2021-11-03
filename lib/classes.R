@@ -1,3 +1,23 @@
+#other functions
+
+check_datatype <-function(types1,types2,lookup){ #data1= input data, data2 = classvec
+  #couldn't figure out how to do with vectors
+  checks = vector(length=length(types1))
+  for(i in 1:length(checks)){
+    nums1 = lookup$match_id[which(lookup$R_name==types1[i])]
+    nums2 = lookup$match_id[which(lookup$SQLite_name==types2[i])]
+    
+    if(!all(is.na(match(nums1,nums2)))){
+      checks[i]<-TRUE
+    }else{
+      checks[i]<-FALSE
+    }
+  }
+  
+  return(all(checks))
+  
+}
+
 #R reference classes
 #generic class
 dbtable <- setRefClass("dbtable", 
@@ -38,8 +58,7 @@ dbtable <- setRefClass("dbtable",
       }else if(attribute=="names"){
         return(.self$getschema()$name)
       }else if(attribute=="type"){
-        types = .self$getschema()$type
-        return(lookup_datatype$match_id[match(types,lookup_datatype$SQLite_name)])
+        return(.self$getschema()$type)
       }
     },
     assert = function(data){
@@ -47,13 +66,18 @@ dbtable <- setRefClass("dbtable",
       if(!namescheck){
         stop("one or more column names is not an exact match of table schema")
       }
-      datatype = match(as.vector(sapply(data, class)),lookup_datatype$R_name)
-      datacheck = all(datatype==.self$tableinfo("type"))
+      classvec = as.vector(sapply(data, class))
+      #even though R codes NA as logical, I want to distinguish from T/F and define it as NULL
+      classvec[which(is.na(data))]<-"NA"
+      datacheck=check_datatype(classvec,.self$tableinfo("type"),lookup_datatype)
       if(!datacheck){
         stop("one or more data types is not compatible with table schema")
       }
     },
     table_insert = function(data){
+    
+      assert(data)
+    
       command = paste("INSERT OR IGNORE INTO",tableinfo("name"),"VALUES",paste("(:",paste(tableinfo("names"),collapse=",:"),")",sep="") ,sep=" ")
             
       insertnew <- dbSendQuery(con,command)
@@ -72,7 +96,9 @@ dbtable <- setRefClass("dbtable",
       
       return(rows)
     },
-    table_delete = function(data){
+    table_delete = function(keyvec){
+    
+       
     
       #data<-data[,bins()$getprimkey()]
       #print(data)
@@ -81,7 +107,7 @@ dbtable <- setRefClass("dbtable",
       command = paste("DELETE FROM",tableinfo("name"),"WHERE",primkey,"= $id",sep=" ")
 
       deletenew <-  dbSendStatement(con,command)
-      dbBind(deletenew, params=list(id=data[,primkey]))
+      dbBind(deletenew, params=list(id=keyvec))
       rows = dbGetRowsAffected(deletenew)
       dbClearResult(deletenew)  
 
@@ -97,26 +123,38 @@ dbtable <- setRefClass("dbtable",
 soundfiles <-setRefClass("soundfiles",
   contains="dbtable",
   methods =list(
-    
+    insert = function(data){ 
+      
+      #first, attempt to insert deployment. Will fill in any missing values with NULL. 
+      deployments()$insert(unique(data$deployments_name),'key') #just fills in the needed key(s)
+      #take data of schema of soundfile
+      affected=table_insert(data) 
+      
+      if(affected>0){
+      
+        #insert deployment name into 'deployments'
+        
+        #generate and insert standard bins into bins
+      
+      }
+    }
   )
 )
 
 bins <-setRefClass("bins",
   contains="dbtable",
   methods =list(
-    testinherit = function(knownkeys,data){
-      .self$compare(knownkeys=knownkeys,data=data)
-      print(str(con))
-      print("it worked")
-    },
-    #call super? 
     insert = function(data){ 
       
-      .self$assert(data) 
+      #take data that also has type. When adding to bins, split off type and reduce to unique ids. then add other data to bintypes
       
-      reply=table_insert(data) #this inserts the data into soundfiles
+      #split data into 
+      affected=table_insert(data) 
       
-      return(reply)
+      #only cascade triggers if there were any rows affected
+      if(affected>0){
+      
+      }
       #insert assumes that keys provided are not related to db keys. So, finds the max key in db, and 
       #print(.self$getprimkey())
        
@@ -124,5 +162,21 @@ bins <-setRefClass("bins",
   )
 )
 
-deployments <-setRefClass("deployments",contains="dbtable")
+deployments <-setRefClass("deployments",
+  contains="dbtable",
+  methods =list(
+    insert = function(data,input='full'){
+
+      if(input=='key'){
+        #build row with NULLs to enter in to db
+        data<-data.frame(data,matrix(nrow = length(data),ncol =(nrow(getschema())-1)))
+        colnames(data)<-getschema()$name
+      }
+      
+      #insert into deployments
+      affected = table_insert(data) 
+      return(affected)
+    }
+  )
+)
 

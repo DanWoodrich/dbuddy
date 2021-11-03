@@ -7,7 +7,7 @@ source("classes.R")
 source("dbcon.R")
 
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
-
+lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"
 #make a db connection, and set some standard pragma settings.  
 con <-standard_con()
 
@@ -23,9 +23,9 @@ if(args[1]=='insert'){
   csvpath = args[2]
   data = read.csv(csvpath)
   if(args[3]=='soundfiles'){
-    soundfiles().insert(data)
+    soundfiles()$insert(data)
   }else if(args[3]=='bins'){
-    bins().insert(data)
+    bins()$insert(data)
   }else if(args[3]=='detections'){
     known_keys = 'y' == args[which(args=="--known_keys")+1] #required argument for detection insertion, y or no
     detections().insert(data,known_keys)
@@ -40,6 +40,7 @@ bins()$getprimkey()
 bins()$testinherit(TRUE,cars)
 
 dbDisconnect(con)
+
 
 
 

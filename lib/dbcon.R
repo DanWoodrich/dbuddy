@@ -1,4 +1,4 @@
-suppressWarnings(suppressMessages(library(RSQLite)))
+
 
 standard_con<- function(){
 

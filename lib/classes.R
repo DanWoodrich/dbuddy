@@ -132,6 +132,8 @@ soundfiles <-setRefClass("soundfiles",
   contains="dbtable",
   methods =list(
     insert = function(data){ 
+    
+      data = data[,c("Name","Duration","deployments_name")] #only take columns of this name
       
       #first, attempt to insert deployment. Will fill in any missing values with NULL. 
       deployments()$insert(unique(data$deployments_name),'key') #just fills in the needed key(s)

@@ -1,5 +1,5 @@
 #install.packages("RSQLite")
-#setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
+setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
 
@@ -32,13 +32,77 @@ if(args[1]=='insert'){
   }
 }  
 
+#example functions: 
 
-  
+#see schema of bin table
+bins()$getschema()
 
-bins()$getprimkey()
+#create some dummy data
+testbindata <-data.frame(c("1","2"),c("1","2"),c(1,2),c(3,4))
+colnames(testbindata)<-bins()$getschema()$name
 
-bins()$testinherit(TRUE,cars)
+#load in dummy data
+bins()$insert(testbindata)
+bins()$view_()
 
+#try inserting data with wrong data type
+wrongdatatype <-data.frame(c(1,2),c("1","2"),c(1,2),c(3,4))
+bins()$insert(wrongdatatype)
+
+#now try inserting data that worked before, again: 
+bins()$insert(testbindata)
+bins()$view_()
+
+#now delete dummy data from bins 
+bins()$table_delete(testbindata$id)
+bins()$view_()
+
+
+#insert and delete will both call other class tables, and their respective functions: soundfiles()$insert, bins_detections$modify() , etc. 
+#doing this with classes allows for complex sequences that are performed procedurally. 
+
+#lets try loading in some soundfiles. Currently, their aren't any in the table. 
+#Soundfiles currently includes in it's basic import function, a call to 'deployments' import. 
+
+deployments()$table_delete("testmanual")
+deployments()$view_()
+
+#can add an entry to deployments: 
+
+deployments()$getschema()
+
+deploymentsdummy<-data.frame("testmanual",30,50,as.integer(42),38,4,40,"then","later",as.integer(16384),"PST","M2",as.integer(1))
+colnames(deploymentsdummy)<-deployments()$getschema()$name
+deployments()$insert(deploymentsdummy)
+
+deployments()$view_()
+deployments()$insert("test2",'key')
+
+#show how deployments is modified when soundfiles are entered
+soundfiles()$view_()
+soundfiles()$getschema()
+
+soundfiledummy<-data.frame("testSF",600,"Testdeployment")
+colnames(soundfiledummy)<-soundfiles()$getschema()$name
+soundfiles()$insert(soundfiledummy)
+
+#now we see that deployments and soundfiles were both updated:
+soundfiles()$view_()
+deployments()$view_()
+
+soundfiles()$table_delete("testSF")
+deployments()$table_delete("Testdeployment")
+
+sfs=read.csv("C:/Users/daniel.woodrich/Desktop/database/soundfiles.csv")
+
+soundfiles()$insert(sfs)
+soundfiles()$table_clear()
+
+
+soundfiles()$view_()
+
+
+dbCommit(con)
 dbDisconnect(con)
 
 

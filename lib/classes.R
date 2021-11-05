@@ -14,7 +14,7 @@ check_datatype <-function(types1,types2,lookup){ #data1= input data, data2 = cla
     }
   }
   
-  return(all(checks))
+  return(checks)
   
 }
 
@@ -70,8 +70,11 @@ dbtable <- setRefClass("dbtable",
       #even though R codes NA as logical, I want to distinguish from T/F and define it as NULL
       classvec[which(is.na(data))]<-"NA"
       datacheck=check_datatype(classvec,.self$tableinfo("type"),lookup_datatype)
-      if(!datacheck){
-        stop("one or more data types is not compatible with table schema")
+      if(!all(datacheck)){
+        print("one or more data types is not compatible with table schema")
+        #print(datacheck)
+        print(colnames(data[!datacheck]))
+        stop()
       }
     },
     table_insert = function(data){
@@ -112,6 +115,9 @@ dbtable <- setRefClass("dbtable",
       dbClearResult(deletenew)  
 
       return(rows)
+    },
+    table_clear = function(){
+    dbExecute(con, paste("DELETE FROM",tableinfo("name")))
     }
     
     
@@ -129,12 +135,21 @@ soundfiles <-setRefClass("soundfiles",
       deployments()$insert(unique(data$deployments_name),'key') #just fills in the needed key(s)
       #take data of schema of soundfile
       affected=table_insert(data) 
+      print(affected)
       
       if(affected>0){
-      
-        #insert deployment name into 'deployments'
         
         #generate and insert standard bins into bins
+        
+        source("standardbins.R")
+        
+        standardbins = make_standard_bins(data)
+        #bins()$insert(standardbins)
+        
+        colnames(standardbins)<-c("id","FileName","SegStart","SegDur","Type")
+
+        #insert into bins
+        bins()$insert(standardbins)
       
       }
     }
@@ -153,6 +168,8 @@ bins <-setRefClass("bins",
       
       #only cascade triggers if there were any rows affected
       if(affected>0){
+      
+         #bins_detections - find detections in new or changed bins... 
       
       }
       #insert assumes that keys provided are not related to db keys. So, finds the max key in db, and 

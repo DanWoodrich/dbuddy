@@ -12,5 +12,3 @@ cd ./lib
 Rscript exec.R %*
 
 cd %PREVDIR%
-
-pause

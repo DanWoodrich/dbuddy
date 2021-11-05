@@ -1,8 +1,14 @@
-library(RSQLite)
+suppressWarnings(suppressMessages(library(RSQLite)))
 
 standard_con<- function(){
 
-con <- dbConnect(RSQLite::SQLite(),"C:/Users/daniel.woodrich/Desktop/database/lab_data.db")
+#dbpath = "C:/Users/daniel.woodrich/Desktop/database/lab_data_exp.db"
+#dbpath = "//161.55.120.117/NMML_AcousticsData/Working_Folders/test database/lab_data.db"
+dbpath = Sys.getenv("DBPATH")  
+
+#print(dbpath)
+
+con <- dbConnect(RSQLite::SQLite(),dbpath)
 dbClearResult(dbSendQuery(con, "PRAGMA foreign_keys = ON"))
 dbClearResult(dbSendQuery(con, "PRAGMA busy_timeout = 60000")) #will attempt to wait for up to one minute before error
 dbClearResult(dbSendQuery(con,"PRAGMA locking_mode = EXCLUSIVE"))

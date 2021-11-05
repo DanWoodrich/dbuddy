@@ -1,5 +1,4 @@
 #functions to create standard bins
-library(foreach)
 
 breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
 
@@ -31,7 +30,7 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
       if(rowtype=="FG"){
       rows = data.frame(row[,1:5],startends,row[,8:9])
       }else if(rowtype=="db"){
-      rows = data.frame(row[,1],startends,row[,3:4],type)
+      rows = data.frame(row[,1],row[,1],row[,4],startends,type) #this has the wrong data rn lol
       }
       data=data[-which(data$index==n),]
       return(rows)
@@ -47,12 +46,14 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
     if(rowtype=="FG"){
     colnames(newrows)[c(6,7)]<-c("SegStart","SegDur")
     }else if(rowtype=="db"){
-    colnames(newrows)[c(2,3)]<-c("SegStart","SegDur")
+    colnames(newrows)[c(3,4,5)]<-c("index","SegStart","SegDur")
     }
     data=rbind(newrows,data)
   }
     
   data<-data[order(data$index,data$SegStart),] #original order
+  
+  data[,1]<-paste(data[,1],data$SegStart,data$SegDur,sep="-")
   
   data$index<-NULL
   
@@ -62,7 +63,7 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
 
 make_standard_bins<-function(data){
 
-  bincategories<-c("LOW","MID","HIGH")
+  bincategories<-c("LOW","REG","SHI")
   binlengths<-c(300,225,90)
 
   out=foreach(i=1:length(binlengths)) %do% {

@@ -1,5 +1,7 @@
 #other functions
 
+suppressWarnings(suppressMessages(library(foreach)))
+
 check_datatype <-function(types1,types2,lookup){ #data1= input data, data2 = classvec
   #couldn't figure out how to do with vectors
   checks = vector(length=length(types1))
@@ -134,8 +136,24 @@ soundfiles <-setRefClass("soundfiles",
       #first, attempt to insert deployment. Will fill in any missing values with NULL. 
       deployments()$insert(unique(data$deployments_name),'key') #just fills in the needed key(s)
       #take data of schema of soundfile
+      
+      #create datetime manually, based on file name. 
+      #sfs only uses 3 columns as input: file name, duration, and deployment name
+      
+      namelens = nchar(data$Name)
+      
+      datetime_str = substr(data$Name,nchar(data$Name)-16,nchar(data$Name)-4)
+      
+      dates = as.POSIXct(datetime_str,format="%y%m%d-%H%M%S",tz="UTC")
+      DateTime = format(dates,"%Y-%m-%d %H:%M:%S")
+      
+      data$DateTime = DateTime
+      
       affected=table_insert(data) 
-      print(affected)
+      
+      data$DateTime<-NULL #not needed for any more downstream inserts. 
+      
+      print(paste(affected,"rows inserted in",tableinfo("name")))
       
       if(affected>0){
         
@@ -143,11 +161,13 @@ soundfiles <-setRefClass("soundfiles",
         
         source("standardbins.R")
         
-        standardbins = make_standard_bins(data)
-        #bins()$insert(standardbins)
+        standardbins = make_standard_bins(data)        
+        #print(data)
+        #print(str(data))
         
         colnames(standardbins)<-c("id","FileName","SegStart","SegDur","Type")
 
+        #return(standardbins)
         #insert into bins
         bins()$insert(standardbins)
       
@@ -162,14 +182,28 @@ bins <-setRefClass("bins",
     insert = function(data){ 
       
       #take data that also has type. When adding to bins, split off type and reduce to unique ids. then add other data to bintypes
+      bintypes_data = data[,c("id","Type")]
+      colnames(bintypes_data) <-c("bins_id","bin_type")
+      bin_data = data[,c("id","FileName","SegStart","SegDur")]
+      
       
       #split data into 
-      affected=table_insert(data) 
+      
+      affected=table_insert(bin_data) 
+      
+      print(paste(affected,"rows inserted in",tableinfo("name")))
       
       #only cascade triggers if there were any rows affected
       if(affected>0){
       
-         #bins_detections - find detections in new or changed bins... 
+        #insert into bin_types
+        affected = bintypes()$table_insert(bintypes_data)
+        
+        print(paste(affected,"rows inserted in bintypes"))
+        
+        #bins_detections - find detections in new or changed bins... 
+        
+        #populate new rows in bin_labels
       
       }
       #insert assumes that keys provided are not related to db keys. So, finds the max key in db, and 
@@ -178,6 +212,8 @@ bins <-setRefClass("bins",
     }
   )
 )
+
+bintypes <-setRefClass("bintypes",contains="dbtable")
 
 deployments <-setRefClass("deployments",
   contains="dbtable",
@@ -192,7 +228,7 @@ deployments <-setRefClass("deployments",
       
       #insert into deployments
       affected = table_insert(data) 
-      return(affected)
+      print(paste(affected,"rows inserted in",tableinfo("name")))
     }
   )
 )

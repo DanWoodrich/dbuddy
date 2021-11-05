@@ -3,8 +3,18 @@ setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
 
+user.input <- function(prompt) {
+  if (interactive()) {
+    return(readline(prompt))
+  } else {
+    cat(prompt)
+    return(readLines("stdin", n=1))
+  }
+}
+
 source("classes.R")
 source("dbcon.R")
+
 
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
 lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"
@@ -14,26 +24,54 @@ con <-standard_con()
 
 #based on the syntax, translate to a class method. 
 args<-commandArgs(trailingOnly = TRUE)
-print(args)
 
 #get variables: 
 
+print("The following changes have been scheduled in this transaction:")
+
 #hardcode everything you can do since it needs to be a defined procedure to enforce trust
 if(args[1]=='insert'){
-  csvpath = args[2]
+  csvpath = args[3]
   data = read.csv(csvpath)
-  if(args[3]=='soundfiles'){
+  if(args[2]=='soundfiles'){
     soundfiles()$insert(data)
-  }else if(args[3]=='bins'){
-    bins()$insert(data)
-  }else if(args[3]=='detections'){
-    known_keys = 'y' == args[which(args=="--known_keys")+1] #required argument for detection insertion, y or no
-    detections().insert(data,known_keys)
   }
+  #}else if(args[3]=='bins'){
+  #  bins()$insert(data)
+  #}else if(args[3]=='detections'){
+  #  known_keys = 'y' == args[which(args=="--known_keys")+1] #required argument for detection insertion, y or no
+  #  detections().insert(data,known_keys)
+  #}
 }  
+
+
+
+
+if(!("--no_warn" %in% args)){ #if no warn is not in arguments
+  choice = user.input(prompt="Commit db transaction? (y/n):")
+  if(choice=='y'){
+    dbCommit(con)
+  }else{
+    print('exiting without changes...')   
+  }
+}else{
+  dbCommit(con)
+}
+
+
+#I should wrap the body of this script in a try() command. Only if it works, call commit, if not, call rollback! This will make transactions atomic. 
+
+
+dbDisconnect(con)
+q()
+
+#stop()
 
 #example functions: 
 
+dontrun = TRUE
+
+if(dontrun){
 #see schema of bin table
 bins()$getschema()
 
@@ -97,32 +135,11 @@ sfs=read.csv("C:/Users/daniel.woodrich/Desktop/database/soundfiles.csv")
 
 soundfiles()$insert(sfs)
 soundfiles()$table_clear()
-
+bintypes()$table_clear()
+bins()$table_clear()
 
 soundfiles()$view_()
+bins()$view_()
+bintypes()$view_()
 
-
-dbCommit(con)
-dbDisconnect(con)
-
-
-
-
-
-#res2 = dbSendStatement(con, "DELETE FROM bins WHERE id='id'")
-#dbGetRowsAffected(res2)
-
-#dbDisconnect(con)
-#
-#dbListTables(con)
-
-#
-#disconnecting connection turns off EXCLUSIVE
-
-
-#testing R package
-#res=dbSendQuery(con, "SELECT * FROM bins LIMIT 4")
-#dbFetch(res)
-
-#dbClearResult(res)
-
+}

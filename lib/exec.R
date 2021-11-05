@@ -1,5 +1,5 @@
 #install.packages("RSQLite")
-setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
+#setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
 

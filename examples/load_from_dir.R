@@ -7,7 +7,7 @@ depnames = substr(outnames,1,nchar(outnames)-15)
 
 for(i in 1:length(outnames)){
   
-  command = paste("dbuddy insert",paste(outpath,outnames[i],sep=""),"soundfiles --no_warn")
+  command = paste("dbuddy insert soundfiles",paste(outpath,outnames[i],sep="")," --no_warn")
   system(command)
 
 }

@@ -15,6 +15,7 @@ user.input <- function(prompt) {
 source("classes.R")
 source("dbcon.R")
 
+suppressWarnings(suppressMessages(library(RSQLite)))
 
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
 lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"

@@ -11,3 +11,11 @@ for(i in 1:length(outnames)){
   system(command)
 
 }
+
+
+#ok: so the following got into the database. Need to try the rest again and debug. 
+deps_l=read.csv("C:/Apps/testdb/deployments_loaded.csv")
+deps_l=unlist(deps_l)
+deps_l = paste(deps_l,"_soundfiles.csv",sep="")
+
+outnames<-outnames[-which(outnames %in% deps_l)]

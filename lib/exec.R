@@ -1,5 +1,6 @@
 #install.packages("RSQLite")
 #setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
+#setwd("C:/Apps/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
 
@@ -20,7 +21,7 @@ suppressWarnings(suppressMessages(library(RSQLite)))
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
 lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"
 #make a db connection, and set some standard pragma settings.  
-con <-standard_con()
+con <-standard_con("C:/Apps/testdb/lab_data_exp.db")
 
 
 #based on the syntax, translate to a class method. 

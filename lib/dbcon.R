@@ -1,10 +1,14 @@
 
 
-standard_con<- function(){
+standard_con<- function(default=NULL){
 
 #dbpath = "C:/Users/daniel.woodrich/Desktop/database/lab_data_exp.db"
 #dbpath = "//161.55.120.117/NMML_AcousticsData/Working_Folders/test database/lab_data.db"
 dbpath = Sys.getenv("DBPATH")  
+
+if(dbpath ==""){ #useful when running from 
+  dbpath = default
+}
 
 #print(dbpath)
 

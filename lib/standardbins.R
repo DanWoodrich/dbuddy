@@ -6,8 +6,9 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
   
   data$index<-1:nrow(data)
   
-  newrows<-foreach(n=1:nrow(data)) %do% {
+  newrows<-foreach(n=1:nrow(data)) %do% { #nrow(data)
   #for(n in 1:nrow(data)){
+    #print(n)
     row = data[which(data$index==n),]
     #go row by row. if duration > binlen, expand row, delete old row, and stich back in. 
     if(row[,colname_dur]>binlen){
@@ -30,7 +31,7 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
       if(rowtype=="FG"){
       rows = data.frame(row[,1:5],startends,row[,8:9])
       }else if(rowtype=="db"){
-      rows = data.frame(row[,1],row[,1],row[,4],startends,type) #this has the wrong data rn lol
+      rows = data.frame(row[,1],row[,1],row[,4],startends,type) 
       }
       data=data[-which(data$index==n),]
       return(rows)
@@ -42,14 +43,23 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
   }
   newrows =do.call("rbind",newrows)
   
+  #transform data to match newrows: 
+  
   if(!is.null(newrows)){
     if(rowtype=="FG"){
     colnames(newrows)[c(6,7)]<-c("SegStart","SegDur")
     }else if(rowtype=="db"){
     colnames(newrows)[c(3,4,5)]<-c("index","SegStart","SegDur")
     }
-    data=rbind(newrows,data)
+    
   }
+  
+  if(nrow(data)>0){
+    data<-data.frame(data$Name,data$Name,data$index,0,data$Duration,type)
+    colnames(data) = colnames(newrows)
+  }
+  
+  data=rbind(newrows,data)
     
   data<-data[order(data$index,data$SegStart),] #original order
   

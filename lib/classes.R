@@ -54,6 +54,24 @@ dbtable <- setRefClass("dbtable",
      
       return(schema[which(schema$pk==1),"name"])
     },
+    maxid = function(){
+    
+      if('id' %in% getschema()$name){
+        query = dbSendQuery(con,paste("SELECT MAX(id) FROM",tableinfo("name")))
+        out = dbFetch(query)
+        dbClearResult(query)
+        
+        if(is.na(out)){
+          out=0
+        }
+         
+        return(out)
+        
+      }else{
+        stop("'id' not in table") 
+      }
+    },
+    
     tableinfo = function(attribute){
       if(attribute=="name"){
         return(.self$getClass()@className[1])
@@ -67,11 +85,14 @@ dbtable <- setRefClass("dbtable",
       namescheck = all(colnames(data)==.self$tableinfo("names"))
       if(!namescheck){
         stop("one or more column names is not an exact match of table schema")
+        #print(colnames(data)[(colnames(data) %in% .self$tableinfo("names"))])
       }
       classvec = as.vector(sapply(data, class))
       #even though R codes NA as logical, I want to distinguish from T/F and define it as NULL
-      classvec[which(is.na(data))]<-"NA"
+      classvec[which(sapply(data, function(x) all(is.na(x))))]<-"NA" #redefine as NA type if all entries are NA
+      
       datacheck=check_datatype(classvec,.self$tableinfo("type"),lookup_datatype)
+      #print(classvec)
       if(!all(datacheck)){
         print("one or more data types is not compatible with table schema")
         #print(datacheck)
@@ -82,9 +103,8 @@ dbtable <- setRefClass("dbtable",
     table_insert = function(data){
     
       assert(data)
-    
+      
       command = paste("INSERT OR IGNORE INTO",tableinfo("name"),"VALUES",paste("(:",paste(tableinfo("names"),collapse=",:"),")",sep="") ,sep=" ")
-            
       insertnew <- dbSendQuery(con,command)
       dbBind(insertnew, params=data) # execute
       rows = dbGetRowsAffected(insertnew)
@@ -101,15 +121,19 @@ dbtable <- setRefClass("dbtable",
       
       return(rows)
     },
-    table_delete = function(keyvec){
+    table_delete = function(keyvec,use_prim=TRUE,id_spec=NULL){
     
        
     
       #data<-data[,bins()$getprimkey()]
       #print(data)
-      primkey = getprimkey()
+      if(use_prim){
+        key = getprimkey()
+      }else{
+        key = id_spec
+      }
       
-      command = paste("DELETE FROM",tableinfo("name"),"WHERE",primkey,"= $id",sep=" ")
+      command = paste("DELETE FROM",tableinfo("name"),"WHERE",key,"= $id",sep=" ")
 
       deletenew <-  dbSendStatement(con,command)
       dbBind(deletenew, params=list(id=keyvec))
@@ -120,13 +144,141 @@ dbtable <- setRefClass("dbtable",
     },
     table_clear = function(){
     dbExecute(con, paste("DELETE FROM",tableinfo("name")))
-    }
+    },
+    sel_from_keys =function(keyvec,use_prim=TRUE,id_spec=NULL){
     
+      if(use_prim){
+        key = getprimkey()
+      }else{
+        key = id_spec
+      }
+        
+      command = paste("SELECT * FROM",tableinfo("name"),"WHERE",key,"= $id",sep=" ")
+
+      query <-  dbSendStatement(con,command)
+      dbBind(query, params=list(id=keyvec))
+      out = dbFetch(query)
+      dbClearResult(query)  
+
+      return(out)
+    
+    }
     
   )
 )
 
 #each table in ERD has a class
+
+detcols_noID<-c("StartTime","EndTime","LowFreq","HighFreq","StartFile","EndFile","probs","VisibleHz",
+      "label","Comments","SignalCode","Type","Analysis_ID","LastAnalyst")
+
+detections <-setRefClass("detections",
+  contains="dbtable",
+  methods =list(
+    insert = function(data,return_id = FALSE){ #insert assumes no known keys
+    
+      data = data[,detcols_noID]
+      
+      startid<-maxid()+1
+      
+      data = cbind(startid:(startid+nrow(data)-1),data)
+      
+      colnames(data)[1]="id"
+
+      #data can now be loaded. 
+      affected = table_insert(data) 
+      
+      print(paste(affected,"rows inserted in",tableinfo("name")))
+      
+      #now, update analysts_detections, and bins_detections
+      
+      #bins_detections()$insert(data)
+      
+      data_ad = data[c("id","LastAnalyst")]
+      colnames(data_ad) = c("detections_id","analysts_code")
+      analysts_detections()$insert(data_ad)
+      
+      if(return_id){
+        return(data$id)
+      }
+      
+      },
+    modify = function(data){ #assumes known keys 
+      
+    data = data[,c("id",detcols_noID)]
+    
+    #grab a copy with the same known keys to compare with
+    
+    prevdata = sel_from_keys(data$id)
+    
+    testdf = data!=prevdata
+    
+    sums = rowSums(testdf,na.rm=TRUE)
+    
+    include = which(sums>0)
+    
+    if(length(include)>0){
+    
+      data = data[include,]
+      
+      #now, test what kind of modifications there are. Split the dataset into time modifications, or attribute modifications
+      
+      #tm = time_mod
+      #pseudo: use testdf, and test for presence of false in any of the four columns: ST,ET,SF,EF
+      testdf_tm = testdf[,c("StartTime","EndTime","StartFile","EndFile")
+      sums_tm = rowSums(testdf_tm,na.rm=TRUE)
+      include_tm = which(sums_tm>0)
+            
+      if(length(include_tm)>0){
+        data_tm = data[include_tm,]
+        
+        #for these data, need to delete the detection ids from bins_detections, and re-insert
+        
+        table_update(data_tm) #Looks like I will want to do REPLACE INTO table(column_list) VALUES(value_list);
+        
+        bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec=detections_id)
+        
+        bins_detections()$insert(data_tm)
+        
+        other_include = include[-which(include %in% include_tm)]
+      }else{
+      other_include = include
+      }
+      
+      if(length(other_include)>0){
+        data_other = data[other_include,]
+        table_update(data_other)
+      }
+    
+      #not yet debugged, do this next! 
+      
+    }else{
+      stop("no modifications detected") 
+    }
+    #compare previous data to current data. First, test for any modifications: 
+    
+    #change_data = 
+      
+    
+    
+    }
+  )
+)  
+
+analysts_detections <-setRefClass("analysts_detections",
+  contains="dbtable",
+  methods =list(
+    insert = function(data){ 
+    
+      data = data[,c("detections_id","analysts_code")]
+      
+      affected = table_insert(data)
+      
+      print(paste(affected,"rows inserted in",tableinfo("name")))
+      
+      }
+  )
+)
 
 soundfiles <-setRefClass("soundfiles",
   contains="dbtable",
@@ -167,7 +319,7 @@ soundfiles <-setRefClass("soundfiles",
         #print(data)
         #print(str(data))
         
-        colnames(standardbins)<-c("id","FileName","SegStart","SegDur","Type")
+        #colnames(standardbins)<-c("id","FileName","SegStart","SegDur","Type")
 
         #return(standardbins)
         #insert into bins

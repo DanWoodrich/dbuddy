@@ -44,19 +44,21 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
   newrows =do.call("rbind",newrows)
   
   #transform data to match newrows: 
-  
-  if(!is.null(newrows)){
-    if(rowtype=="FG"){
-    colnames(newrows)[c(6,7)]<-c("SegStart","SegDur")
-    }else if(rowtype=="db"){
-    colnames(newrows)[c(3,4,5)]<-c("index","SegStart","SegDur")
-    }
+  if(rowtype=="FG"){
+    colnamesout = c(colnames(data[,1:5],"SegStart","SegDur",colnames(data[,8:9])))
+  }else{
+    colnamesout = c("id","FileName","index","SegStart","SegDur","Type")
+  }
     
+  if(!is.null(newrows)){
+    colnames(newrows)<-colnamesout
   }
   
   if(nrow(data)>0){
     data<-data.frame(data$Name,data$Name,data$index,0,data$Duration,type)
-    colnames(data) = colnames(newrows)
+    colnames(data) = colnamesout
+  }else{
+    data =NULL
   }
   
   data=rbind(newrows,data)

@@ -121,6 +121,20 @@ dbtable <- setRefClass("dbtable",
       
       return(rows)
     },
+    table_update = function(data){
+      
+      
+      assert(data)
+      
+      command = paste("REPLACE INTO",tableinfo("name"),"VALUES",paste("(:",paste(tableinfo("names"),collapse=",:"),")",sep="") ,sep=" ")
+      replace <- dbSendQuery(con,command)
+      dbBind(replace, params=data) # execute
+      rows = dbGetRowsAffected(replace)
+      dbClearResult(replace)  # release the prepared statement
+      
+      return(rows)
+      
+    },
     table_delete = function(keyvec,use_prim=TRUE,id_spec=NULL){
     
        
@@ -179,7 +193,7 @@ detections <-setRefClass("detections",
     
       data = data[,detcols_noID]
       
-      startid<-maxid()+1
+      startid<-as.integer(maxid())+1
       
       data = cbind(startid:(startid+nrow(data)-1),data)
       
@@ -219,35 +233,57 @@ detections <-setRefClass("detections",
     
     if(length(include)>0){
     
-      data = data[include,]
+      dataIn = data[include,]
       
+      #first, test to see if analyst was changed. This means the detection was reviewed, and the record will be stored in anaylsts detections
+      
+      testdf_an = testdf[,"LastAnalyst"]
+      include_an = which(testdf_an)
+      
+      if(length(include_an)>0){
+       
+        #reduce dataset to just annotations: 
+        
+        data_an = dataIn[include_an,]
+        
+        data_an = data_an[c("id","LastAnalyst")]
+        colnames(data_an) = c("detections_id","analysts_code")
+        analysts_detections()$insert(data_an)
+        
+      }
+        
+        
       #now, test what kind of modifications there are. Split the dataset into time modifications, or attribute modifications
       
       #tm = time_mod
       #pseudo: use testdf, and test for presence of false in any of the four columns: ST,ET,SF,EF
-      testdf_tm = testdf[,c("StartTime","EndTime","StartFile","EndFile")
+      testdf_tm = testdf[,c("StartTime","EndTime","StartFile","EndFile")]
       sums_tm = rowSums(testdf_tm,na.rm=TRUE)
       include_tm = which(sums_tm>0)
             
       if(length(include_tm)>0){
-        data_tm = data[include_tm,]
+        data_tm = dataIn[include_tm,]
         
         #for these data, need to delete the detection ids from bins_detections, and re-insert
         
-        table_update(data_tm) #Looks like I will want to do REPLACE INTO table(column_list) VALUES(value_list);
+        affected = table_update(data_tm) #Looks like I will want to do REPLACE INTO table(column_list) VALUES(value_list);
+        
+        print(paste(affected,"rows inserted in",tableinfo("name"),"with timestamps modified"))
         
         bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec=detections_id)
         
         bins_detections()$insert(data_tm)
         
-        other_include = include[-which(include %in% include_tm)]
+        other_include = include[-include_tm]
       }else{
       other_include = include
       }
       
       if(length(other_include)>0){
         data_other = data[other_include,]
-        table_update(data_other)
+        affected = table_update(data_other)
+        
+        print(paste(affected,"rows inserted in",tableinfo("name"),"without timestamps modified"))
       }
     
       #not yet debugged, do this next! 

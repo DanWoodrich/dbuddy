@@ -206,11 +206,15 @@ detections <-setRefClass("detections",
       
       #now, update analysts_detections, and bins_detections
       
-      #bins_detections()$insert(data)
+      #analsts_detections
       
       data_ad = data[c("id","LastAnalyst")]
       colnames(data_ad) = c("detections_id","analysts_code")
       analysts_detections()$insert(data_ad)
+      
+      #bins detections
+      bins_detections()$insert(data,id_type="detections")
+      
       
       if(return_id){
         return(data$id)
@@ -264,15 +268,20 @@ detections <-setRefClass("detections",
       if(length(include_tm)>0){
         data_tm = dataIn[include_tm,]
         
+        if(any(data_tm$SignalCode=="DET"|data_tm$SignalCode=="SC")){
+          #should I make this default to add a new detection, or just error out? 
+          stop("you are not allowed to change the timestamps of DET or SC data")
+        }
+        
         #for these data, need to delete the detection ids from bins_detections, and re-insert
         
         affected = table_update(data_tm) #Looks like I will want to do REPLACE INTO table(column_list) VALUES(value_list);
         
-        print(paste(affected,"rows inserted in",tableinfo("name"),"with timestamps modified"))
+        print(paste(affected,"rows modified in",tableinfo("name"),"with change in timestamps"))
         
-        bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec=detections_id)
+        bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec="detections_id")
         
-        bins_detections()$insert(data_tm)
+        bins_detections()$insert(data_tm,id_type="detections")
         
         other_include = include[-include_tm]
       }else{
@@ -283,7 +292,7 @@ detections <-setRefClass("detections",
         data_other = data[other_include,]
         affected = table_update(data_other)
         
-        print(paste(affected,"rows inserted in",tableinfo("name"),"without timestamps modified"))
+        print(paste(affected,"rows modified in",tableinfo("name"),"without change in timestamps"))
       }
     
       #not yet debugged, do this next! 
@@ -299,7 +308,54 @@ detections <-setRefClass("detections",
     
     }
   )
-)  
+)
+
+bins_detections <-setRefClass("bins_detections",
+  contains="dbtable",
+  methods =list(
+    insert = function(data,id_type){
+      
+      #id_type can = bins or detections
+      
+      if(id_type=="detections"){
+        
+        detdata = data[,c("id","StartTime","EndTime","StartFile","EndFile")]
+        
+        bindata = bins()$sel_from_keys(unique(c(detdata$StartFile,detdata$Endfile)),use_prim=FALSE,id_spec="FileName")
+        
+      }else if(id_type=="bins"){
+        
+        bindata = data[,c("id","FileName","SegStart","SegDur")]
+        
+        detdata1= detections()$sel_from_keys(bindata$FileName,use_prim=FALSE,id_spec="StartFile")
+        detdata2= detections()$sel_from_keys(bindata$FileName,use_prim=FALSE,id_spec="EndFile")
+        
+        detdata = rbind(detdata1,detdata2)
+        
+        detdata<-detdata[which(!duplicated(detdata$id)),] #remove duplicates
+      }
+      
+      source("dets_bins_overlap.R")
+      
+      #before sending into this fxn, reduce data to just the soundfiles being compared
+      
+      if(nrow(bindata)>0 & nrow(detdata)>0){
+        outdata = compare_dets_bins(bindata,detdata)
+        affected = table_insert(outdata)
+        print(paste(affected,"rows inserted in",tableinfo("name")))
+      }else if(nrow(bindata)==0){
+        print("no bins in soundfiles provided by detection data: no rows inserted into bins_detections")
+      }else if(nrow(detdata)==0){
+        print("no detections in soundfiles provided by bins data: no rows inserted into bins_detections")
+      }
+      
+    }
+  )
+)
+      
+      
+      
+                                      
 
 analysts_detections <-setRefClass("analysts_detections",
   contains="dbtable",
@@ -391,7 +447,7 @@ bins <-setRefClass("bins",
         
         print(paste(affected,"rows inserted in bintypes"))
         
-        #bins_detections - find detections in new or changed bins... 
+        bins_detections()$insert(bin_data,id_type="bins")
         
         #populate new rows in bin_labels
       

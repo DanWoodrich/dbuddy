@@ -110,6 +110,8 @@ dbtable <- setRefClass("dbtable",
       rows = dbGetRowsAffected(insertnew)
       dbClearResult(insertnew)  # release the prepared statement
       
+      print(paste(rows,"rows inserted in",tableinfo("name")))
+      
       
       #first, query the data to see if there are any duplicate keys- this will crash dbAppendTable
       
@@ -153,6 +155,9 @@ dbtable <- setRefClass("dbtable",
       dbBind(deletenew, params=list(id=keyvec))
       rows = dbGetRowsAffected(deletenew)
       dbClearResult(deletenew)  
+      
+      print(paste(rows,"rows deleted in",tableinfo("name")))
+      
 
       return(rows)
     },
@@ -201,8 +206,6 @@ detections <-setRefClass("detections",
 
       #data can now be loaded. 
       affected = table_insert(data) 
-      
-      print(paste(affected,"rows inserted in",tableinfo("name")))
       
       #now, update analysts_detections, and bins_detections
       
@@ -306,6 +309,13 @@ detections <-setRefClass("detections",
       
     
     
+    },
+    delete = function(keys){
+      
+      analysts_detections()$table_delete(keys,use_prim=FALSE,id_spec="detections_id")
+      bins_detections()$table_delete(keys,use_prim=FALSE,id_spec="detections_id")
+      
+      affected = table_delete(keys)
     }
   )
 )
@@ -341,8 +351,7 @@ bins_detections <-setRefClass("bins_detections",
       
       if(nrow(bindata)>0 & nrow(detdata)>0){
         outdata = compare_dets_bins(bindata,detdata)
-        affected = table_insert(outdata)
-        print(paste(affected,"rows inserted in",tableinfo("name")))
+        table_insert(outdata)
       }else if(nrow(bindata)==0){
         print("no bins in soundfiles provided by detection data: no rows inserted into bins_detections")
       }else if(nrow(detdata)==0){
@@ -355,7 +364,7 @@ bins_detections <-setRefClass("bins_detections",
       
       
       
-                                      
+analysts <-setRefClass("analysts",contains="dbtable")
 
 analysts_detections <-setRefClass("analysts_detections",
   contains="dbtable",
@@ -364,9 +373,7 @@ analysts_detections <-setRefClass("analysts_detections",
     
       data = data[,c("detections_id","analysts_code")]
       
-      affected = table_insert(data)
-      
-      print(paste(affected,"rows inserted in",tableinfo("name")))
+      table_insert(data)
       
       }
   )
@@ -398,8 +405,6 @@ soundfiles <-setRefClass("soundfiles",
       affected=table_insert(data) 
       
       data$DateTime<-NULL #not needed for any more downstream inserts. 
-      
-      print(paste(affected,"rows inserted in",tableinfo("name")))
       
       if(affected>0){
         
@@ -437,16 +442,12 @@ bins <-setRefClass("bins",
       
       affected=table_insert(bin_data) 
       
-      print(paste(affected,"rows inserted in",tableinfo("name")))
-      
       #only cascade triggers if there were any rows affected
       if(affected>0){
       
         #insert into bin_types
-        affected = bintypes()$table_insert(bintypes_data)
-        
-        print(paste(affected,"rows inserted in bintypes"))
-        
+        bintypes()$table_insert(bintypes_data)
+
         bins_detections()$insert(bin_data,id_type="bins")
         
         #populate new rows in bin_labels
@@ -473,8 +474,42 @@ deployments <-setRefClass("deployments",
       }
       
       #insert into deployments
-      affected = table_insert(data) 
-      print(paste(affected,"rows inserted in",tableinfo("name")))
+      table_insert(data) 
+    }
+  )
+)
+
+bins_filegroups<-setRefClass("bins_filegroups",
+  contains="dbtable",
+  methods =list(
+    insert = function(data){
+      #print(str(data))
+      table_insert(data) 
+    }
+  )
+)
+
+filegroups<-setRefClass("filegroups",
+  contains="dbtable",
+  methods =list(
+    insert = function(data,name,Sel_method=NULL,desc=NULL){
+      
+      FG_row = data.frame(name,Sel_method,desc)
+      colnames(FG_row)<-c("Name","SelectionMethod","Description")
+      table_insert(FG_row)
+
+      data = data[,c("FileName","SegStart","SegDur")]
+      
+      id = paste(data$FileName,data$SegStart,data$SegDur,sep="-")
+      
+      #reformat to put in bins_filegroups
+      data =data.frame(cbind(id,name))
+      colnames(data)<-c("bins_id","FG_name")
+      #print(data)
+      
+      #now that data is formatted with correct ID, can 
+      bins_filegroups()$insert(data)
+      
     }
   )
 )

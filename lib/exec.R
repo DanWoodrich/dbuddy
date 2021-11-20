@@ -18,6 +18,7 @@ source("dbcon.R")
 
 suppressWarnings(suppressMessages(library(RSQLite)))
 
+
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
 lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"
 #make a db connection, and set some standard pragma settings.  
@@ -26,7 +27,6 @@ con <-standard_con("C:/Users/daniel.woodrich/Desktop/database/lab_data_exp.db")
 
 #based on the syntax, translate to a class method. 
 args<-commandArgs(trailingOnly = TRUE)
-
 #get variables: 
 
 print("The following changes have been scheduled in this transaction:")
@@ -35,34 +35,109 @@ print("The following changes have been scheduled in this transaction:")
 if(args[1]=='insert'){
   csvpath = args[3]
   data = read.csv(csvpath)
+  data$Comments[is.na(data$Comments)]<-""
   if(args[2]=='soundfiles'){
     soundfiles()$insert(data)
-  }
   #}else if(args[3]=='bins'){
   #  bins()$insert(data)
   #}else if(args[3]=='detections'){
   #  known_keys = 'y' == args[which(args=="--known_keys")+1] #required argument for detection insertion, y or no
   #  detections().insert(data,known_keys)
   #}
+  }else if(args[2]=='filegroups'){
+    name = substr(csvpath,1,(nchar(csvpath)-4))
+    name = basename(name) #removes path
+    
+    #--SelectionMethod optional argument
+    if("--SelectionMethod" %in% args){
+      selmethod = which(args=="--SelectionMethod")
+    }
+    
+    if("--Description" %in% args){
+      desc = which(args=="--Description")
+    }
+    
+    #recombine any spaces between these arguments: 
+    
+    if(selmethod<desc){
+      selmethodarg = paste(args[(selmethod+1):(desc-1)],collapse=" ")
+      descarg = paste(args[(desc+1):length(args)],collapse=" ")
+    }else{
+      descarg = paste(args[(desc+1):(selmethodarg-1)],collapse=" ")
+      selmethodarg = paste(args[(selmethodarg+1):length(args)],collapse=" ")
+    }
+   
+    filegroups()$insert(data,name,selmethodarg,descarg)
+  }else if (args[2]=='detections'){
+    data$VisibleHz = as.character(data$VisibleHz)
+    detections()$insert(data)
+  }
 }  
 
-
-
-
-if(!("--no_warn" %in% args)){ #if no warn is not in arguments
-  choice = user.input(prompt="Commit db transaction? (y/n):")
-  if(choice=='y'){
-    dbCommit(con)
-  }else{
-    print('exiting without changes...')   
+if(args[1]=='modify'){
+  csvpath = args[3]
+  data = read.csv(csvpath)
+  data$Comments[is.na(data$Comments)]<-""
+  if(args[2]=='detections'){
+    data$VisibleHz = as.character(data$VisibleHz)
+    detections()$modify(data)
   }
-}else{
-  dbCommit(con)
+}
+
+if(args[1]=='delete'){
+  csvpath = args[3]
+  keys = read.csv(csvpath) #expects single column corresponding to keys
+  if(args[2]=='detections'){
+    detections()$delete(keys[,1])
+  }
+}
+
+#print(args)
+if(args[1] == 'pull'){
+  
+  outfile = args[3]
+  
+  if(args[2]=='detections'){
+    
+    #FileGroups
+    
+    FG = args[which(args=="--FileGroup")+1]
+    #if .csv is present, remove it from string
+    if(grepl(".csv",FG)){
+      FG = substr(FG,1,nchar(FG)-4)
+    }
+  
+    SignalCode = args[which(args=="--SignalCode")+1]
+                      
+    #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
+    
+    command = paste("SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
+    JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id
+    WHERE detections.SignalCode='",SignalCode,"' and filegroups.Name='",FG,"' and detections.Type='i_neg';",sep="")
+    
+    query = dbSendQuery(con,command)
+    out = dbFetch(query)
+    
+    write.csv(out,gzfile(outfile),row.names = FALSE)
+    
+  } 
 }
 
 
-#I should wrap the body of this script in a try() command. Only if it works, call commit, if not, call rollback! This will make transactions atomic. 
 
+
+#if(!("--no_warn" %in% args)){ #if no warn is not in arguments
+#  choice = user.input(prompt="Commit db transaction? (y/n):")
+#  if(choice=='y'){
+#    dbCommit(con)
+#  }else{
+#    print('exiting without changes...')   
+#  }
+#}else{
+#  dbCommit(con)
+#}
+
+dbCommit(con)
 
 dbDisconnect(con)
 q()

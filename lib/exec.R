@@ -120,7 +120,43 @@ if(args[1] == 'pull'){
     
     write.csv(out,gzfile(outfile),row.names = FALSE)
     
-  } 
+  }else if(args[2]=='filegroups'){
+    
+    FG = args[which(args=="--FileGroup")+1]
+    #if .csv is present, remove it from string
+    if(grepl(".csv",FG)){
+      FG = substr(FG,1,nchar(FG)-4)
+    }
+    
+   command = paste("SELECT FileName,SegStart,Segdur FROM bins JOIN bins_filegroups ON bins.id = bins_filegroups.bins_id JOIN filegroups ON
+                   bins_filegroups.FG_name = filegroups.Name WHERE filegroups.Name='",FG,"';",sep="")
+   
+   query = dbSendQuery(con,command)
+   
+   out = dbFetch(query)
+   dbClearResult(query)  
+   
+   #now that we have these fields, we also need to get some metadata from soundfiles (StartTime,Duration) and from deployments (Name)
+   
+   #with the fields contained in out, I want to get other data 
+   
+   command = "SELECT soundfiles.Name,soundfiles.Duration,soundfiles.DateTime,deployments.Name FROM soundfiles JOIN deployments ON soundfiles.deployments_name = deployments.Name
+                   WHERE soundfiles.Name=$fnames;"
+   
+   moremeta <-  dbSendStatement(con,command)
+   dbBind(moremeta, params=list(fnames=out$FileName))
+   out2 = dbFetch(moremeta)
+   dbClearResult(moremeta)  
+   
+   out2$DateTime<-as.POSIXct(out2$DateTime,tz="UTC")
+   out2=out2[,2:length(out2)]
+   #finally, the path can get derived from DateTime and Mooring name. 
+   #format datetime to character 6digit date and 6digit time 
+   out = data.frame(out$FileName,paste("/",out2$Name,"/",format(out2$DateTime,"%m"),"_",format(out2$DateTime,"%Y"),"/",sep=""),format(out2$DateTime,"%y%m%d-%H%M%S"),out2$Duration,out2$Name,out$SegStart,out$SegDur)
+   colnames(out)<-c("FileName","FullPath","StartTime","Duration","Deployment","SegStart","SegDur")
+   write.csv(out,gzfile(outfile),row.names = FALSE)
+    
+  }
 }
 
 

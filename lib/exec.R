@@ -1,5 +1,5 @@
 #install.packages("RSQLite")
-setwd("C:/Users/daniel.woodrich/Desktop/database/dbuddy/lib")
+#setwd("C:/database/dbuddy/lib")
 #setwd("C:/Apps/dbuddy/lib")
 #class definitions: 
 #make a table class. Will have standard methods
@@ -20,19 +20,28 @@ suppressWarnings(suppressMessages(library(RSQLite)))
 
 
 lookup_datatype<-read.csv("../etc/DataTypeLookupR_SQLite3.csv")
-lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA"
+suppressWarnings(lookup_datatype$R_name[which(is.na(lookup_datatype$R_name))]<-"NA")
 #make a db connection, and set some standard pragma settings.  
-con <-standard_con("C:/Users/daniel.woodrich/Desktop/database/lab_data_exp.db")
+con <-standard_con("C:/database/lab_data_exp.db")
 
 
 #based on the syntax, translate to a class method. 
 args<-commandArgs(trailingOnly = TRUE)
 #get variables: 
+#print(args)
 
-print("The following changes have been scheduled in this transaction:")
+if(any(args=="'*'")){
+  args[which(args=="'*'")]<-"*"
+}
+
+if(length(args)==1){
+  #means it came in a a combined string from system2
+  args = strsplit(args," ")[[1]]
+}
 
 #hardcode everything you can do since it needs to be a defined procedure to enforce trust
 if(args[1]=='insert'){
+  print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   data = read.csv(csvpath)
   data$Comments[is.na(data$Comments)]<-""
@@ -70,11 +79,16 @@ if(args[1]=='insert'){
     filegroups()$insert(data,name,selmethodarg,descarg)
   }else if (args[2]=='detections'){
     data$VisibleHz = as.character(data$VisibleHz)
+    
+    #print(data)
+    #print(str(data))
+    
     detections()$insert(data)
   }
 }  
 
 if(args[1]=='modify'){
+  print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   data = read.csv(csvpath)
   data$Comments[is.na(data$Comments)]<-""
@@ -85,6 +99,7 @@ if(args[1]=='modify'){
 }
 
 if(args[1]=='delete'){
+  print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   keys = read.csv(csvpath) #expects single column corresponding to keys
   if(args[2]=='detections'){
@@ -157,9 +172,50 @@ if(args[1] == 'pull'){
    write.csv(out,gzfile(outfile),row.names = FALSE)
     
   }
+  
+  if(args[2]=='direct'){
+    
+    args = paste(args[4:grep(";",args)],collapse=" ") #find the end semicolon and stop there 
+    query = dbSendQuery(con,args)
+    out = dbFetch(query)
+    
+    write.csv(out,gzfile(outfile),row.names = FALSE)
+    
+  }
 }
 
+if(args[1]=='direct'){
+  
+  #this allows you to directly talk to the database using a standard command. Susceptible to attacks/vulnerabilities
+  #from malicious use from NOAA lab users (low risk..). There is also a standard backup from db server. 
+  
+  #note that this doesn't work for SQLite shell commands (ie: .tables, .schema, etc) but works for select options
+  
+  
+  args = paste(args[2:grep(";",args)],collapse=" ") #find the end semicolon and stop there 
+  query = dbSendQuery(con,args)
+  out = dbFetch(query)
+  dbClearResult(query)
+  
+  print(out)
+  
+}
 
+if(args[1]=='info'){
+  
+  if(args[2]=='tables' & length(args)==3){
+    #get info on specific tables
+    
+    exp = parse(text=paste(args[3],"()$getschema()",sep=""))
+    
+    eval(exp)
+    
+  }else if(args[2]=='tables'){
+    #list tables
+    out= dbListTables(con)
+    print(out)
+  }
+}
 
 
 #if(!("--no_warn" %in% args)){ #if no warn is not in arguments

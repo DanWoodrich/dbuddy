@@ -101,7 +101,7 @@ dbtable <- setRefClass("dbtable",
       }
     },
     table_insert = function(data){
-    
+      
       assert(data)
       
       command = paste("INSERT OR IGNORE INTO",tableinfo("name"),"VALUES",paste("(:",paste(tableinfo("names"),collapse=",:"),")",sep="") ,sep=" ")
@@ -244,7 +244,7 @@ detections <-setRefClass("detections",
       
       #first, test to see if analyst was changed. This means the detection was reviewed, and the record will be stored in anaylsts detections
       
-      testdf_an = testdf[,"LastAnalyst"]
+      testdf_an = testdf[,"LastAnalyst",drop = FALSE]
       include_an = which(testdf_an)
       
       if(length(include_an)>0){
@@ -264,7 +264,7 @@ detections <-setRefClass("detections",
       
       #tm = time_mod
       #pseudo: use testdf, and test for presence of false in any of the four columns: ST,ET,SF,EF
-      testdf_tm = testdf[,c("StartTime","EndTime","StartFile","EndFile")]
+      testdf_tm = testdf[,c("StartTime","EndTime","StartFile","EndFile"),drop = FALSE]
       sums_tm = rowSums(testdf_tm,na.rm=TRUE)
       include_tm = which(sums_tm>0)
             

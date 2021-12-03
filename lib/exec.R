@@ -13,6 +13,18 @@ user.input <- function(prompt) {
   }
 }
 
+args<-commandArgs(trailingOnly = TRUE)
+
+if(args[1]=="config"){
+  
+  source("../etc/Installe.R")
+  
+  opt <- options(show.error.messages = FALSE)
+  on.exit(options(opt))
+  
+  stop()
+}
+
 source("classes.R")
 source("dbcon.R")
 
@@ -26,7 +38,7 @@ con <-standard_con("C:/database/lab_data_exp.db")
 
 
 #based on the syntax, translate to a class method. 
-args<-commandArgs(trailingOnly = TRUE)
+
 #get variables: 
 #print(args)
 

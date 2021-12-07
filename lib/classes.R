@@ -331,8 +331,9 @@ bins_detections <-setRefClass("bins_detections",
         
         detdata = data[,c("id","StartTime","EndTime","StartFile","EndFile")]
         
+        #print("start big query")
         bindata = bins()$sel_from_keys(unique(c(detdata$StartFile,detdata$Endfile)),use_prim=FALSE,id_spec="FileName")
-        
+        #print("end big query")
       }else if(id_type=="bins"){
         
         bindata = data[,c("id","FileName","SegStart","SegDur")]
@@ -364,7 +365,47 @@ bins_detections <-setRefClass("bins_detections",
       
       
       
-analysts <-setRefClass("analysts",contains="dbtable")
+analysts <-setRefClass("analysts",contains="dbtable") #this needs a custom function for insert like analyses, but using codes instead of id
+analyses <-setRefClass("analyses",
+  contains="dbtable",
+  methods =list(
+    insert = function(data){ 
+      
+      #data = data[,c("detections_id","analysts_code")]
+      
+      if('id' %in% colnames(data)){
+        #check to see if there are ids- if there are and they match existing ids, split into insert and modify operation
+        
+        prevdata = sel_from_keys(data$id)
+        
+        changedata = data[which(data$id %in% prevdata$id),]
+        
+        dataNew = data[-which(data$id %in% prevdata$id),]
+        
+        testdf = changedata!=prevdata
+        
+        sums = rowSums(testdf,na.rm=TRUE)
+        
+        include = which(sums>0)
+        
+        if(length(include)>0){
+          #remove and add the modified rows. 
+          dataIn = data[include,]
+          
+          affected = table_update(dataIn)
+          
+          print(paste(affected,"rows modified in",tableinfo("name")))
+          
+        }
+        
+        if(nrow(dataNew)>0){
+          table_insert(dataNew)
+        }
+        
+      }
+    }
+  )
+)
 
 analysts_detections <-setRefClass("analysts_detections",
   contains="dbtable",

@@ -1,5 +1,6 @@
 #functions to create standard bins
 
+
 breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
 
   #condition: if the row has a higher duration than the max of the bins, break it into multiple until condition is satisfied

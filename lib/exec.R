@@ -28,6 +28,7 @@ if(args[1]=="config"){
 source("classes.R")
 source("dbcon.R")
 
+
 suppressWarnings(suppressMessages(library(RSQLite)))
 
 
@@ -56,7 +57,6 @@ if(args[1]=='insert'){
   print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   data = read.csv(csvpath)
-  data$Comments[is.na(data$Comments)]<-""
   if(args[2]=='soundfiles'){
     soundfiles()$insert(data)
   #}else if(args[3]=='bins'){
@@ -90,12 +90,23 @@ if(args[1]=='insert'){
    
     filegroups()$insert(data,name,selmethodarg,descarg)
   }else if (args[2]=='detections'){
+    data$Comments[is.na(data$Comments)]<-""
     data$VisibleHz = as.character(data$VisibleHz)
     
     #print(data)
     #print(str(data))
     
-    detections()$insert(data)
+    if("--out" %in% args){
+      
+      out = detections()$insert(data,return_id=TRUE)
+
+      write.csv(out,gzfile(args[which(args=="--out")+1]),row.names = FALSE) #file path comes after out
+    }else{
+      detections()$insert(data)
+    }
+  }else if(args[2]=="analyses"){
+    
+    analyses()$insert(data)
   }
 }  
 
@@ -103,10 +114,14 @@ if(args[1]=='modify'){
   print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   data = read.csv(csvpath)
-  data$Comments[is.na(data$Comments)]<-""
+  
   if(args[2]=='detections'){
+    data$Comments[is.na(data$Comments)]<-""
     data$VisibleHz = as.character(data$VisibleHz)
     detections()$modify(data)
+  }else if(args[2]=="analyses"){
+    
+    analyses()$modify(data)
   }
 }
 

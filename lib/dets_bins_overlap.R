@@ -2,6 +2,19 @@
 #associations can be used to find detections within a specified effort.
 #these relationships can later be used to compare labels across different bin extents
 
+
+suppressWarnings(suppressMessages(library(doParallel)))
+suppressWarnings(suppressMessages(library(parallel)))
+
+startLocalPar<-function(num_cores,...){
+  
+  cluz <<- parallel::makeCluster(num_cores)
+  registerDoParallel(cluz)
+  
+  clusterExport(cluz, c(...))
+  
+}
+
 compare_dets_bins <-function(bindata,detdata){
   
   detdata$StartTime = round(detdata$StartTime,2)
@@ -10,7 +23,16 @@ compare_dets_bins <-function(bindata,detdata){
   #first, reduce data by soundfiles
   files = unique(bindata$FileName)
   
-  filematchout = foreach(i=1:length(files)) %do% {
+  crs = detectCores()
+  if(length(files)>crs){
+    crs =1 #not worth overhead
+  }
+  bindata<<-bindata
+  detdata<<-detdata
+  files<<-files
+  startLocalPar(crs,"bindata","detdata","files")
+  
+  filematchout = foreach(i=1:length(files),.packages=c("doParallel","parallel")) %dopar% {
     
     file = files[i]
     
@@ -93,6 +115,7 @@ compare_dets_bins <-function(bindata,detdata){
     return(binmatchout)
   
   }
+  stopCluster(cluz)
   
   filematchout= do.call('rbind',filematchout)
   bins_detections_tab<-data.frame(filematchout)

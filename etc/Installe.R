@@ -1,6 +1,6 @@
 options(timeout=1800)
 
-Packages<-c("RSQLite","foreach")
+Packages<-c("RSQLite","doParallel")
 
 for(n in Packages){
   if(require(n,character.only=TRUE)){

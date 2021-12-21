@@ -216,8 +216,8 @@ detections <-setRefClass("detections",
       colnames(data_ad) = c("detections_id","analysts_code")
       analysts_detections()$insert(data_ad)
       
-      #bins detections
-      bins_detections()$insert(data,id_type="detections")
+      #bins detections: REMOVE FROM PHASE 1 DBUDDY
+      #bins_detections()$insert(data,id_type="detections")
       
       
       if(return_id){
@@ -283,9 +283,9 @@ detections <-setRefClass("detections",
         
         print(paste(affected,"rows modified in",tableinfo("name"),"with change in timestamps"))
         
-        bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec="detections_id")
-        
-        bins_detections()$insert(data_tm,id_type="detections")
+        #REMOVE FROM PHASE 1 DBUDDY
+        #bins_detections()$table_delete(data_tm$id,use_prim=FALSE,id_spec="detections_id")
+        #bins_detections()$insert(data_tm,id_type="detections")
         
         other_include = include[-include_tm]
       }else{
@@ -314,7 +314,9 @@ detections <-setRefClass("detections",
     delete = function(keys){
       
       analysts_detections()$table_delete(keys,use_prim=FALSE,id_spec="detections_id")
-      bins_detections()$table_delete(keys,use_prim=FALSE,id_spec="detections_id")
+      
+      #REMOVE FROM PHASE 1 DBUDDY
+      #bins_detections()$table_delete(keys,use_prim=FALSE,id_spec="detections_id")
       
       affected = table_delete(keys)
     }
@@ -490,7 +492,8 @@ bins <-setRefClass("bins",
         #insert into bin_types
         bintypes()$table_insert(bintypes_data)
 
-        bins_detections()$insert(bin_data,id_type="bins")
+        #REMOVE FROM PHASE 1 DBUDDY
+        #bins_detections()$insert(bin_data,id_type="bins")
         
         #populate new rows in bin_labels
       

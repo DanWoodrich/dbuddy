@@ -15,6 +15,10 @@ user.input <- function(prompt) {
 
 args<-commandArgs(trailingOnly = TRUE)
 
+#print(commandArgs())
+
+#print(args)
+
 if(args[1]=="config"){
   
   source("../etc/Installe.R")
@@ -43,8 +47,18 @@ con <-standard_con("C:/database/lab_data_exp.db")
 #get variables: 
 #print(args)
 
-if(any(args=="'*'")){
-  args[which(args=="'*'")]<-"*"
+badsymbols = c("'*'","gThan","lThan")
+if(any(args %in% badsymbols)){   
+  badsymbols = badsymbols[which(badsymbols %in% args)]
+  for(n in 1:length(badsymbols)){
+    if(badsymbols[n]=="lThan"){
+	  args[which(args==badsymbols[n])]<- "<"
+    }else if(badsymbols[n]=="gThan"){
+	  args[which(args==badsymbols[n])]<- ">"
+    }else{
+    args[which(args==badsymbols[n])]<- gsub("'", '', badsymbols[n])
+	}
+  }
 }
 
 if(length(args)==1){
@@ -142,20 +156,45 @@ if(args[1] == 'pull'){
   if(args[2]=='detections'){
     
     #FileGroups
+	
+	 command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
+    JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id "
     
     FG = args[which(args=="--FileGroup")+1]
     #if .csv is present, remove it from string
     if(grepl(".csv",FG)){
       FG = substr(FG,1,nchar(FG)-4)
     }
-  
-    SignalCode = args[which(args=="--SignalCode")+1]
+	
+	command = paste(command,"WHERE filegroups.Name='",FG,"'",sep="")
+	
+	if("--SignalCode" %in% args){
+		
+		SignalCode = args[which(args=="--SignalCode")+1]
+		command = command = paste(command," and detections.SignalCode='",SignalCode,"'",sep="")
+	}
+	
+	if("--Analysis_ID" %in% args){
+		
+		Analysis_ID = args[which(args=="--Analysis_ID")+1]
+		command = command = paste(command," and detections.Analysis_ID='",Analysis_ID,"'",sep="")
+	}
+	
+	if("--label" %in% args){
+		
+		label = args[which(args=="--label")+1]
+		command = command = paste(command," and detections.label='",label,"'",sep="")
+	}
+	
+	if("--Type" %in% args){
+		
+		Type = args[which(args=="--Type")+1]
+		command = command = paste(command," and detections.Type='",Type,"'",sep="")
+	}else{
+		command = command = paste(command,";",sep="")
+	}
                       
     #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
-    
-    command = paste("SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
-    JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id
-    WHERE detections.SignalCode='",SignalCode,"' and filegroups.Name='",FG,"' and detections.Type='i_neg';",sep="")
     
     query = dbSendQuery(con,command)
     out = dbFetch(query)

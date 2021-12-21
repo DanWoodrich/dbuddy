@@ -203,10 +203,11 @@ detections <-setRefClass("detections",
       data = cbind(startid:(startid+nrow(data)-1),data)
       
       colnames(data)[1]="id"
-
+		
+	  print("made it")
       #data can now be loaded. 
       affected = table_insert(data) 
-      
+      print("made it2")
       #now, update analysts_detections, and bins_detections
       
       #analsts_detections

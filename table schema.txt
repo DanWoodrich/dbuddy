@@ -1,0 +1,50 @@
+filegroups:
+
+CREATE TABLE filegroups(Name TEXT PRIMARY KEY, SelectionMethod TEXT, Description TEXT);
+
+bins:
+
+CREATE TABLE bins(id TEXT PRIMARY KEY, FileName TEXT, SegStart REAL, SegDur REAL); 
+
+CREATE TABLE bintypes(bins_id TEXT REFERENCES bins(id), bin_type TEXT);
+
+bins_filegroups: (junction)
+
+CREATE TABLE bins_filegroups(bins_id TEXT REFERENCES bins(id), FG_name TEXT REFERENCES filegroups(Name),PRIMARY KEY(bins_id,FG_name));
+
+detections:
+
+CREATE TABLE detections(id INTEGER PRIMARY KEY, StartTime REAL, EndTime REAL, LowFreq REAL, HighFreq REAL, StartFile TEXT, EndFile TEXT,
+probs REAL, VisibleHz TEXT, label TEXT, Comments TEXT, SignalCode TEXT, Type TEXT, Analysis_ID INTEGER, LastAnalyst TEXT,
+FOREIGN KEY (StartFile) REFERENCES soundfiles (Name), FOREIGN KEY (EndFile) REFERENCES soundfiles (Name), FOREIGN KEY (LastAnalyst) REFERENCES analysts(Code),
+FOREIGN KEY (Analysis_ID) REFERENCES analyses(id));
+
+bins_detections (junction):
+
+CREATE TABLE bins_detections(detections_id TEXT REFERENCES detections(id), relationship TEXT, bins_id TEXT REFERENCES bins(id));
+
+analysts:
+
+CREATE TABLE analysts(Code TEXT PRIMARY KEY, Name TEXT, Lab TEXT, Active TEXT);
+
+analysts_detections (junction):
+
+CREATE TABLE analysts_detections(detections_id INTEGER, analysts_code TEXT, FOREIGN KEY (detections_id) REFERENCES detections (id), 
+FOREIGN KEY (analysts_code) REFERENCES analysts (Code));
+
+deployments: 
+
+CREATE TABLE deployments(Name TEXT PRIMARY KEY, Latitude REAL, Longitude REAL, WaterDepth INTEGER, SensorDepth REAL, 
+RecTime REAL, CycleTime REAL, StartData TEXT, EndData TEXT, SamplingRate INTEGER, TimeZone TEXT, MooringID TEXT, WavByHand INTEGER);
+
+soundfiles: 
+
+CREATE TABLE soundfiles(Name TEXT PRIMARY KEY, Duration REAL, deployments_name TEXT, DateTime TEXT,FOREIGN KEY (deployments_name) REFERENCES deployments(Name));
+
+analyses:
+
+CREATE TABLE analyses(id INTEGER PRIMARY KEY, Name TEXT, Hash TEXT, Type TEXT, HashDescription TEXT, Description TEXT, FolderLink TEXT);
+
+analyses_filegroups: 
+
+CREATE TABLE analyses_filegroups(analyses_id INTEGER REFERENCES analyses(id), FG_name TEXT REFERENCES filegroups(Name), relationship TEXT);

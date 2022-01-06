@@ -534,6 +534,17 @@ bins_filegroups<-setRefClass("bins_filegroups",
   )
 )
 
+analyses_filegroups<-setRefClass("bins_filegroups",
+  contains="dbtable",
+  methods =list(
+    insert = function(data){
+      #print(str(data))
+      table_insert(data) 
+    }
+  )
+)
+
+
 filegroups<-setRefClass("filegroups",
   contains="dbtable",
   methods =list(

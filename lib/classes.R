@@ -555,7 +555,13 @@ filegroups<-setRefClass("filegroups",
       #now that data is formatted with correct ID, can 
       bins_filegroups()$insert(data)
       
-    }
+    },
+	delete = function(name){
+	  
+      bins_filegroups()$table_delete(name,use_prim=FALSE,id_spec="FG_name")
+      
+      affected = table_delete(name)
+	 }
   )
 )
 

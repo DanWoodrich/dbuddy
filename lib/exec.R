@@ -80,9 +80,13 @@ if(args[1]=='insert'){
   #  detections().insert(data,known_keys)
   #}
   }else if(args[2]=='filegroups'){
+	
+	if(length(args)<8){
     name = substr(csvpath,1,(nchar(csvpath)-4))
     name = basename(name) #removes path
-    
+    }else{
+	name = args[4] #name will be 4th arg if present
+	}
     #--SelectionMethod optional argument
     if("--SelectionMethod" %in% args){
       selmethod = which(args=="--SelectionMethod")
@@ -143,9 +147,16 @@ if(args[1]=='delete'){
   print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   keys = read.csv(csvpath) #expects single column corresponding to keys
-  if(args[2]=='detections'){
-    detections()$delete(keys[,1])
-  }
+
+	
+  #if(args[2]=='detections'){
+  #  detections()$delete(keys[,1])
+  #}
+  
+  #not working for some reason
+  exp = parse(text=paste(args[2],"()$delete(keys[,1])",sep=""))
+  #print(exp)
+  eval(exp)
 }
 
 #print(args)
@@ -157,9 +168,12 @@ if(args[1] == 'pull'){
     
     #FileGroups
 	
-	 command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
-    JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id "
+	 #command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
+    #JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id "
     
+	command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
+    JOIN bins ON bins.id = bins_filegroups.bins_id JOIN detections ON bins.FileName = detections.StartFile "
+	
     FG = args[which(args=="--FileGroup")+1]
     #if .csv is present, remove it from string
     if(grepl(".csv",FG)){
@@ -242,6 +256,7 @@ if(args[1] == 'pull'){
   if(args[2]=='direct'){
     
     args = paste(args[4:grep(";",args)],collapse=" ") #find the end semicolon and stop there 
+	#print(args)
     query = dbSendQuery(con,args)
     out = dbFetch(query)
     

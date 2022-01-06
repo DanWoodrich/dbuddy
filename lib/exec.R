@@ -71,15 +71,7 @@ if(args[1]=='insert'){
   print("The following changes have been scheduled in this transaction:")
   csvpath = args[3]
   data = read.csv(csvpath)
-  if(args[2]=='soundfiles'){
-    soundfiles()$insert(data)
-  #}else if(args[3]=='bins'){
-  #  bins()$insert(data)
-  #}else if(args[3]=='detections'){
-  #  known_keys = 'y' == args[which(args=="--known_keys")+1] #required argument for detection insertion, y or no
-  #  detections().insert(data,known_keys)
-  #}
-  }else if(args[2]=='filegroups'){
+  if(args[2]=='filegroups'){
 	
 	if(length(args)<8){
     name = substr(csvpath,1,(nchar(csvpath)-4))
@@ -122,10 +114,9 @@ if(args[1]=='insert'){
     }else{
       detections()$insert(data)
     }
-  }else if(args[2]=="analyses"){
-    
-    analyses()$insert(data)
-  }
+  }else{
+	exp = parse(text=paste(args[2],"()$insert(data)",sep=""))
+	eval(exp)
 }  
 
 if(args[1]=='modify'){
@@ -137,9 +128,9 @@ if(args[1]=='modify'){
     data$Comments[is.na(data$Comments)]<-""
     data$VisibleHz = as.character(data$VisibleHz)
     detections()$modify(data)
-  }else if(args[2]=="analyses"){
-    
-    analyses()$modify(data)
+  }else{
+    exp = parse(text=paste(args[2],"()$modify(data)",sep=""))
+	eval(exp)
   }
 }
 

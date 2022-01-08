@@ -161,44 +161,49 @@ if(args[1] == 'pull'){
 	
 	 #command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
     #JOIN bins_detections ON bins_filegroups.bins_id = bins_detections.bins_id JOIN detections ON bins_detections.detections_id = detections.id "
+  
+    if("--FileGroup" %in% args){
     
-	command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
-    JOIN bins ON bins.id = bins_filegroups.bins_id JOIN detections ON bins.FileName = detections.StartFile "
-	
-    FG = args[which(args=="--FileGroup")+1]
-    #if .csv is present, remove it from string
-    if(grepl(".csv",FG)){
-      FG = substr(FG,1,nchar(FG)-4)
+      command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
+      JOIN bins ON bins.id = bins_filegroups.bins_id JOIN detections ON bins.FileName = detections.StartFile WHERE "
+    
+      FG = args[which(args=="--FileGroup")+1]
+      #if .csv is present, remove it from string
+      if(grepl(".csv",FG)){
+        FG = substr(FG,1,nchar(FG)-4)
+      }
+    
+     command = paste(command,"filegroups.Name='",FG,"' AND ",sep="")
+     
+     args = args[-c(which(args==FileGroup),which(args==FileGroup)+1),]
+     
+     }else{
+     
+     command = "SELECT * FROM detections WHERE"
+     
+     }
+   
+    for(i in grep("--",args)){
+    
+      key = args[i]
+      val = args[which(args==key)+1]
+      
+      if(key == "--Comments"){
+        #for comments, enable text matching with Like (use % in parameter for wildcard)
+        statement = paste("detections.",key,"LIKE ",val,sep="")
+      }else{
+        statement = paste("detections.",key,"='",val,"'",sep="")
+      }
+      
+      command = paste(command,statement)
+      
+      if( i == grep("--",args)[length(grep("--",args)]){
+        command = paste(command,";",sep="")
+      }else{
+        command = paste(command,"AND ")
+      }
+   
     }
-	
-	command = paste(command,"WHERE filegroups.Name='",FG,"'",sep="")
-	
-	if("--SignalCode" %in% args){
-		
-		SignalCode = args[which(args=="--SignalCode")+1]
-		command = command = paste(command," and detections.SignalCode='",SignalCode,"'",sep="")
-	}
-	
-	if("--Analysis_ID" %in% args){
-		
-		Analysis_ID = args[which(args=="--Analysis_ID")+1]
-		command = command = paste(command," and detections.Analysis_ID='",Analysis_ID,"'",sep="")
-	}
-	
-	if("--label" %in% args){
-		
-		label = args[which(args=="--label")+1]
-		command = command = paste(command," and detections.label='",label,"'",sep="")
-	}
-	
-	if("--Type" %in% args){
-		
-		Type = args[which(args=="--Type")+1]
-		command = command = paste(command," and detections.Type='",Type,"'",sep="")
-	}else{
-		command = command = paste(command,";",sep="")
-	}
-                      
     #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
     
     query = dbSendQuery(con,command)

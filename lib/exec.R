@@ -117,6 +117,7 @@ if(args[1]=='insert'){
   }else{
 	exp = parse(text=paste(args[2],"()$insert(data)",sep=""))
 	eval(exp)
+  }
 }  
 
 if(args[1]=='modify'){
@@ -164,8 +165,7 @@ if(args[1] == 'pull'){
   
     if("--FileGroup" %in% args){
     
-      command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name 
-      JOIN bins ON bins.id = bins_filegroups.bins_id JOIN detections ON bins.FileName = detections.StartFile WHERE "
+      command = "SELECT DISTINCT detections.* FROM filegroups JOIN bins_filegroups ON filegroups.Name = bins_filegroups.FG_name JOIN bins ON bins.id = bins_filegroups.bins_id JOIN detections ON bins.FileName = detections.StartFile WHERE "
     
       FG = args[which(args=="--FileGroup")+1]
       #if .csv is present, remove it from string
@@ -173,9 +173,9 @@ if(args[1] == 'pull'){
         FG = substr(FG,1,nchar(FG)-4)
       }
     
-     command = paste(command,"filegroups.Name='",FG,"' AND ",sep="")
+     command = paste(command,"filegroups.Name='",FG,"' AND",sep="")
      
-     args = args[-c(which(args==FileGroup),which(args==FileGroup)+1)]
+     args = args[-c(which(args=="--FileGroup"),which(args=="--FileGroup")+1)]
      
      }else{
      
@@ -184,14 +184,13 @@ if(args[1] == 'pull'){
      }
    
     for(i in grep("--",args)){
-	
     
-      key = args[i]
-      val = args[which(args==key)+1]
+      key = substr(args[i],3,nchar(args[i]))
+      val = args[which(args==args[i])+1]
       
-      if(key == "--Comments"){
+      if(key == "Comments"){
         #for comments, enable text matching with Like (use % in parameter for wildcard)
-        statement = paste("detections.",key,"LIKE ",val,sep="")
+        statement = paste("detections.",key," LIKE '",val,"'",sep="")
       }else{
         statement = paste("detections.",key,"='",val,"'",sep="")
       }
@@ -206,7 +205,8 @@ if(args[1] == 'pull'){
 
     }
     #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
-    
+    #print(command)
+	#stop()
     query = dbSendQuery(con,command)
     out = dbFetch(query)
     

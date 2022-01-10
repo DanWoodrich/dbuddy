@@ -248,9 +248,7 @@ if(args[1] == 'pull'){
    colnames(out)<-c("FileName","FullPath","StartTime","Duration","Deployment","SegStart","SegDur")
    write.csv(out,gzfile(outfile),row.names = FALSE)
     
-  }
-  
-  if(args[2]=='direct'){
+  }else if(args[2]=='direct'){
     
     args = paste(args[4:grep(";",args)],collapse=" ") #find the end semicolon and stop there 
 	#print(args)
@@ -260,6 +258,32 @@ if(args[1] == 'pull'){
     write.csv(out,gzfile(outfile),row.names = FALSE)
     
   }
+  
+}
+
+if(args[1]=='pull_from_data'){
+	#this one allows for input and output arguments
+	
+	print(args)
+	csvpath = args[3]
+	data = read.csv(csvpath)
+	
+	outfile = args[4]
+	
+	if(args[2]=='soundfiles'){
+	
+	#behavior of this is to full FG metadata just based on soundfiles data 
+	command = "SELECT soundfiles.Name,soundfiles.Duration,soundfiles.DateTime,deployments.Name,deployments.MooringID FROM soundfiles JOIN deployments ON soundfiles.deployments_name = deployments.Name
+                   WHERE soundfiles.Name=$fnames;"
+   
+   query <-  dbSendStatement(con,command)
+   dbBind(query, params=list(fnames=data$files))
+   out2 = dbFetch(query)
+   dbClearResult(query)  
+   
+   write.csv(out2,gzfile(outfile),row.names = FALSE)
+   
+	}
 }
 
 if(args[1]=='direct'){

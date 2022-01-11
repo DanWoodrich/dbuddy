@@ -232,16 +232,36 @@ detections <-setRefClass("detections",
     #grab a copy with the same known keys to compare with
     
     prevdata = sel_from_keys(data$id)
-    
-    testdf = data!=prevdata
+	
+	#see if there are DET or SC type dets in data. If so, make sure these are reset to values
+	
+	if(any(data$Type=="DET"|data$Type=="SC")){
+		
+		  index = which(data$Type=="DET"|data$Type=="SC")
+		
+		  #just set values to previous values. 
+		  data[index,"StartTime"]<-prevdata[index,"StartTime"]
+		  data[index,"EndTime"]<-prevdata[index,"EndTime"]
+		  data[index,"StartFile"]<-prevdata[index,"StartFile"]
+		  data[index,"EndFile"]<-prevdata[index,"EndFile"]
+          #should I make this default to add a new detection, or just error out? 
+          print("Warning: you are not allowed to change the timestamps of DET or SC data. Timestamp changes in these records were reverted")
+    }
+
+	datacompare = data
+	#make copy of dataset and round values
+	datacompare$StartTime= round(datacompare$StartTime,2)
+	datacompare$EndTime= round(datacompare$EndTime,2)
+	prevdata$StartTime=round(prevdata$StartTime,2)
+    prevdata$EndTime=round(prevdata$EndTime,2)
+	
+    testdf = datacompare!=prevdata
     
     sums = rowSums(testdf,na.rm=TRUE)
     
     include = which(sums>0)
     
     if(length(include)>0){
-    
-      dataIn = data[include,]
       
       #first, test to see if analyst was changed. This means the detection was reviewed, and the record will be stored in anaylsts detections
       
@@ -252,14 +272,13 @@ detections <-setRefClass("detections",
        
         #reduce dataset to just annotations: 
         
-        data_an = dataIn[include_an,]
+        data_an = data[include_an,]
         
         data_an = data_an[c("id","LastAnalyst")]
         colnames(data_an) = c("detections_id","analysts_code")
         analysts_detections()$insert(data_an)
         
       }
-        
         
       #now, test what kind of modifications there are. Split the dataset into time modifications, or attribute modifications
       
@@ -270,15 +289,28 @@ detections <-setRefClass("detections",
       include_tm = which(sums_tm>0)
             
       if(length(include_tm)>0){
-        data_tm = dataIn[include_tm,]
+        data_tm = data[include_tm,]
         
-        if(any(data_tm$SignalCode=="DET"|data_tm$SignalCode=="SC")){
-          #should I make this default to add a new detection, or just error out? 
+		#print(include_tm)
+		#print(data_tm)
+
+		#print(head(testdf[include_tm,]))
+		
+		#stop()
+		
+        if(any(data_tm$Type=="DET"|data_tm$Type=="SC")){
+		
           stop("you are not allowed to change the timestamps of DET or SC data")
         }
         
         #for these data, need to delete the detection ids from bins_detections, and re-insert
         
+		#print(data_tm)
+		
+		#print(head(datacompare[include_tm,]))
+		#print(head(prevdata[include_tm,]))
+		#stop()
+		
         affected = table_update(data_tm) #Looks like I will want to do REPLACE INTO table(column_list) VALUES(value_list);
         
         print(paste(affected,"rows modified in",tableinfo("name"),"with change in timestamps"))

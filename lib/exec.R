@@ -173,9 +173,15 @@ if(args[1] == 'pull'){
         FG = substr(FG,1,nchar(FG)-4)
       }
     
-     command = paste(command,"filegroups.Name='",FG,"' AND",sep="")
+     command = paste(command,"filegroups.Name='",FG,"'",sep="") 
      
      args = args[-c(which(args=="--FileGroup"),which(args=="--FileGroup")+1)]
+	 
+	 if(any(grepl("--",args))){
+	 #if there are more arguments add an and 
+	 command = paste(command," AND",sep="")
+	 
+	 }
      
      }else{
      
@@ -197,13 +203,14 @@ if(args[1] == 'pull'){
       
       command = paste(command,statement)
       
-      if( i == grep("--",args)[length(grep("--",args))]){
-        command = paste(command,";",sep="")
-      }else{
-        command = paste(command,"AND ")
+      if( i != grep("--",args)[length(grep("--",args))]){
+		command = paste(command,"AND ")
+        
       }
 
     }
+	
+	command = paste(command,";",sep="")
     #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
     #print(command)
 	#stop()

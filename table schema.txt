@@ -47,4 +47,5 @@ CREATE TABLE analyses(id INTEGER PRIMARY KEY, Name TEXT, Hash TEXT, Type TEXT, H
 
 analyses_filegroups: 
 
-CREATE TABLE analyses_filegroups(analyses_id INTEGER REFERENCES analyses(id), FG_name TEXT REFERENCES filegroups(Name), relationship TEXT);
+CREATE TABLE analyses_filegroups(analyses_id INTEGER REFERENCES analyses(id), FG_name TEXT REFERENCES filegroups(Name), relationship TEXT, completed TEXT, reviewed TEXT,
+  UNIQUE (analyses_id,FG_name,relationship);

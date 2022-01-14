@@ -177,17 +177,17 @@ if(args[1] == 'pull'){
      
      args = args[-c(which(args=="--FileGroup"),which(args=="--FileGroup")+1)]
 	 
-	 if(any(grepl("--",args))){
-	 #if there are more arguments add an and 
-	 command = paste(command," AND",sep="")
-	 
-	 }
+  	 if(any(grepl("--",args))){
+  	 #if there are more arguments add an and 
+  	 command = paste(command," AND",sep="")
+  	 
+  	 }
      
-     }else{
+   }else{
      
      command = "SELECT * FROM detections WHERE"
      
-     }
+    }
    
     for(i in grep("--",args)){
     
@@ -197,6 +197,8 @@ if(args[1] == 'pull'){
       if(key == "Comments"){
         #for comments, enable text matching with Like (use % in parameter for wildcard)
         statement = paste("detections.",key," LIKE '",val,"'",sep="")
+      }else if(key == 'Analysis_ID'){
+        statement = paste("detections.",key,"=",val,sep="")
       }else{
         statement = paste("detections.",key,"='",val,"'",sep="")
       }
@@ -204,7 +206,7 @@ if(args[1] == 'pull'){
       command = paste(command,statement)
       
       if( i != grep("--",args)[length(grep("--",args))]){
-		command = paste(command,"AND ")
+		command = paste(command,"AND")
         
       }
 

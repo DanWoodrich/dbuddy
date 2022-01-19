@@ -214,8 +214,7 @@ if(args[1] == 'pull'){
 	
 	command = paste(command,";",sep="")
     #I think that should only do these hardcoded functions for SELECT needs used through INSTINCT. Otherwise, better to just directly use SQL on DB.  
-    #print(command)
-	#stop()
+
     query = dbSendQuery(con,command)
     out = dbFetch(query)
     

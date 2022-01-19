@@ -181,10 +181,25 @@ dbtable <- setRefClass("dbtable",
 
       return(out)
     
-    }
-    
+    },
+	
+	#convenience fxn to add ids to a table w/o ids: 
+
+	addIDs = function(data,cols_noID){
+
+		data = data[,cols_noID]
+		  
+		startid<-as.integer(maxid())+1
+		  
+		data = cbind(startid:(startid+nrow(data)-1),data)
+		  
+		colnames(data)[1]="id"
+		
+		return(data)
+	}
   )
 )
+
 
 #each table in ERD has a class
 
@@ -196,13 +211,9 @@ detections <-setRefClass("detections",
   methods =list(
     insert = function(data,return_id = FALSE){ #insert assumes no known keys
     
-      data = data[,detcols_noID]
-      
-      startid<-as.integer(maxid())+1
-      
-      data = cbind(startid:(startid+nrow(data)-1),data)
-      
-      colnames(data)[1]="id"
+      #detcols_noID = cols
+	  
+	  data = addIDs(data,detcols_noID)
 		
 	  print("made it")
       #data can now be loaded. 
@@ -405,6 +416,8 @@ analyses <-setRefClass("analyses",
   contains="dbtable",
   methods =list(
     insert = function(data){ 
+	
+	  #this is out of pattern- modify should be a seperate method as in other tables to allow for standard client library fxn. CHANGE. 
       
       #data = data[,c("detections_id","analysts_code")]
       
@@ -566,13 +579,28 @@ bins_filegroups<-setRefClass("bins_filegroups",
   )
 )
 
+a_f_cols_noID<-c("analyses_id","FG_name","relationship","completed","reviewed")
+
 analyses_filegroups<-setRefClass("analyses_filegroups",
   contains="dbtable",
   methods =list(
     insert = function(data){
+	
+	  data = addIDs(data,a_f_cols_noID)
       #print(str(data))
-      table_insert(data) 
-    }
+      table_insert(data)
+    },
+	modify = function(data){
+	
+	  data = data[,c("id",a_f_cols_noID)]
+    
+      #shouldn't affect anything to just delete and reupload the data (simpler than comparison). 
+	  table_update(data$id)
+      
+	},
+	delete = function(ids){
+	  table_delete(ids)
+	}
   )
 )
 

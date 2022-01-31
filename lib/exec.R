@@ -225,12 +225,26 @@ if(args[1] == 'pull'){
     FG = args[which(args=="--FileGroup")+1]
     #if .csv is present, remove it from string
     if(grepl(".csv",FG)){
-      FG = substr(FG,1,nchar(FG)-4)
+       gsub(".csv","",FG)
     }
+	
+	command = paste("SELECT FileName,SegStart,Segdur FROM bins JOIN bins_filegroups ON bins.id = bins_filegroups.bins_id JOIN filegroups ON
+                   bins_filegroups.FG_name = filegroups.Name WHERE filegroups.Name")
+	
+	if(grepl(",",FG)){
+	#if multiple FGs. 
+	FG = paste("'",paste0(strsplit(FG,",")[[1]],collapse="','"),"'",sep="")
+	
+	command = paste(command," IN (",FG,");",sep="")
+	
+	print(command)
+	
+	}else{
+	
+	command = paste(command,"='",FG,"';",sep="")
+	
+	}
     
-   command = paste("SELECT FileName,SegStart,Segdur FROM bins JOIN bins_filegroups ON bins.id = bins_filegroups.bins_id JOIN filegroups ON
-                   bins_filegroups.FG_name = filegroups.Name WHERE filegroups.Name='",FG,"';",sep="")
-   
    query = dbSendQuery(con,command)
    
    out = dbFetch(query)

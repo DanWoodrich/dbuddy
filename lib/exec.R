@@ -225,25 +225,40 @@ if(args[1] == 'pull'){
     FG = args[which(args=="--FileGroup")+1]
     #if .csv is present, remove it from string
     if(grepl(".csv",FG)){
-       gsub(".csv","",FG)
+       FG =gsub(".csv","",FG)
     }
 	
-	command = paste("SELECT FileName,SegStart,Segdur FROM bins JOIN bins_filegroups ON bins.id = bins_filegroups.bins_id JOIN filegroups ON
-                   bins_filegroups.FG_name = filegroups.Name WHERE filegroups.Name")
+	command = paste("SELECT FileName,SegStart,Segdur FROM bins JOIN bins_filegroups ON bins.id = bins_filegroups.bins_id JOIN filegroups ON bins_filegroups.FG_name = filegroups.Name")	
+
+	if("--con_ord" %in% args){
+	
+		command = paste(command,"JOIN soundfiles ON bins.FileName = soundfiles.Name")
+
+	}
 	
 	if(grepl(",",FG)){
 	#if multiple FGs. 
 	FG = paste("'",paste0(strsplit(FG,",")[[1]],collapse="','"),"'",sep="")
 	
-	command = paste(command," IN (",FG,");",sep="")
-	
-	print(command)
+	command = paste(command," WHERE filegroups.Name IN (",FG,")",sep="")
 	
 	}else{
 	
-	command = paste(command,"='",FG,"';",sep="")
+	command = paste(command," WHERE filegroups.Name='",FG,"'",sep="")
 	
 	}
+	
+	if("--con_ord" %in% args){
+	
+		command = paste(command,"ORDER BY soundfiles.DateTime ASC;")
+
+	}else{
+	
+		command = paste(command,";",sep="")
+	
+	}
+	
+	print(command)
     
    query = dbSendQuery(con,command)
    

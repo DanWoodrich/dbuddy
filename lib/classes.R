@@ -412,13 +412,20 @@ bins_detections <-setRefClass("bins_detections",
       
       
 analysts <-setRefClass("analysts",contains="dbtable") #this needs a custom function for insert like analyses, but using codes instead of id
+
+
+a_cols_noID =c("Name","Hash","Type","HashDescription","Description","FolderLink")  
 analyses <-setRefClass("analyses",
   contains="dbtable",
   methods =list(
-    insert = function(data){ 
+	insert = function(data){
 	
-	  #this is out of pattern- modify should be a seperate method as in other tables to allow for standard client library fxn. CHANGE. 
-      
+		data = addIDs(data,a_cols_noID)
+		#print(str(data))
+		table_insert(data)
+    },
+    modify = function(data){ 
+	      
       #data = data[,c("detections_id","analysts_code")]
       
       if('id' %in% colnames(data)){
@@ -447,11 +454,14 @@ analyses <-setRefClass("analyses",
         }
         
         if(nrow(dataNew)>0){
-          table_insert(dataNew)
+          analyses()$insert(dataNew)
         }
         
       }
-    }
+    },
+	delete = function(ids){
+	  table_delete(ids)
+	}
   )
 )
 

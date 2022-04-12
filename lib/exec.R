@@ -61,6 +61,8 @@ if(any(args %in% badsymbols)){
   }
 }
 
+#print(args)
+
 if(length(args)==1){
   #means it came in a a combined string from system2
   args = strsplit(args," ")[[1]]
@@ -332,6 +334,7 @@ if(args[1]=='direct'){
   
   
   args = paste(args[2:grep(";",args)],collapse=" ") #find the end semicolon and stop there 
+  #print(args)
   query = dbSendQuery(con,args)
   out = dbFetch(query)
   dbClearResult(query)

@@ -5,6 +5,8 @@ breakbins<-function(data,binlen,type,colname_dur = "Duration",rowtype= "db"){
 
   #condition: if the row has a higher duration than the max of the bins, break it into multiple until condition is satisfied
   
+  #this needs to be updated! currently bugged. 
+  
   data$index<-1:nrow(data)
   
   newrows<-foreach(n=1:nrow(data)) %do% { #nrow(data)

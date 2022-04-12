@@ -583,6 +583,7 @@ bins_filegroups<-setRefClass("bins_filegroups",
   contains="dbtable",
   methods =list(
     insert = function(data){
+	
       #print(str(data))
       table_insert(data) 
     }
@@ -624,15 +625,30 @@ filegroups<-setRefClass("filegroups",
       colnames(FG_row)<-c("Name","SelectionMethod","Description")
       table_insert(FG_row)
 
-      data = data[,c("FileName","SegStart","SegDur")]
+      data = data[,c("FileName","SegStart","SegDur","Type")]
       
       id = paste(data$FileName,data$SegStart,data$SegDur,sep="-")
+	  
+	  #print(data)
+
+	  #add catch: if any type is custom, try to add it to bins first. 
+	  if(any(data$Type=="CUSTOM")){
+	  
+		data2 = data.frame(cbind(id,data))
+		
+		data2 = data2[which(data2$Type=="CUSTOM"),] #if custom, try to enter it since won't be in by default
+		
+		#print(data2)
+	  
+	    bins()$insert(data2)
+
+	  }
       
       #reformat to put in bins_filegroups
       data =data.frame(cbind(id,name))
       colnames(data)<-c("bins_id","FG_name")
       #print(data)
-      
+	        
       #now that data is formatted with correct ID, can 
       bins_filegroups()$insert(data)
       
